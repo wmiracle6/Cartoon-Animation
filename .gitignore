@@ -1,18 +1,55 @@
-# This .gitignore is appropriate for repositories deployed to GitHub Pages and using
-# a Gemfile as specified at https://github.com/github/pages-gem#conventional
+# ==================== UNITY ====================
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Dd]erivedData/
+[Mm]emoryCaptures/
 
-# Basic Jekyll gitignores (synchronize to Jekyll.gitignore)
-_site/
-.sass-cache/
-.jekyll-cache/
-.jekyll-metadata
+# ==================== VISUAL STUDIO 2022 ====================
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.sln.ide
+*.sln.cache
+*.sln.lastsucceededloadstate.cache
+*.sln.startup.cache
+*.csproj.user
+*.csproj.dtbcache.json
+*.csproj.codeanalysis.excludecache
+*.nupkg.cache
+*.userprefs
+*.mono.userprefs
+*.tmp
+*.slnx
+*.vsconfig
 
-# Additional Ruby/bundler ignore for when you run: bundle install
-/vendor
+# Rider / JetBrains
+.idea/
+*.sln.iml
 
-# Specific ignore for GitHub Pages
-# GitHub Pages will always use its own deployed version of pages-gem
-# This means GitHub Pages will NOT use your Gemfile.lock and therefore it is
-# counterproductive to check this file into the repository.
-# Details at https://github.com/github/pages-gem/issues/768
-Gemfile.lock
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# ==================== OS ====================
+.DS_Store
+.DS_Store.meta
+Thumbs.db
+Thumbs.db.meta
+Desktop.ini
+Desktop.ini.meta
+$RECYCLE.BIN/
+.Spotlight-V100/
+.Trashes/
+ehthumbs.db
+
+# ==================== MISC ====================
+*.log
+*.pidb
+*.booproj

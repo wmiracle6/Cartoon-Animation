@@ -1,0 +1,102 @@
+# Auto detect text files and normalize line endings
+* text=auto
+
+# ==================== BINARY ASSETS (Unity) ====================
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.tga binary
+*.bmp binary
+*.psd binary
+*.tif binary
+*.tiff binary
+*.ico binary
+*.icns binary
+*.exr binary
+*.hdr binary
+*.ktx binary
+
+*.fbx binary
+*.obj binary
+*.dae binary
+*.blend binary
+*.ma binary
+*.mb binary
+*.max binary
+*.c4d binary
+*.lwo binary
+*.lws binary
+*.mot binary
+
+*.unity binary
+*.prefab binary
+*.mat binary
+*.anim binary
+*.controller binary
+*.lighting binary
+*.physicMaterial binary
+*.physicsMaterial2D binary
+*.renderTexture binary
+*.cubemap binary
+*.flavor binary
+*.asset binary
+*.guiskin binary
+*.fontsettings binary
+*.timeline binary
+*.playable binary
+*.overrideController binary
+
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.aif binary
+*.aiff binary
+*.m4a binary
+*.wma binary
+
+*.mp4 binary
+*.mov binary
+*.avi binary
+*.wmv binary
+*.mkv binary
+*.webm binary
+
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+
+*.zip binary
+*.rar binary
+*.7z binary
+*.tar.gz binary
+
+*.dll binary
+*.exe binary
+*.so binary
+*.dylib binary
+*.bundle binary
+*.plugin binary
+
+# ==================== TEXT FILES ====================
+*.cs text diff=csharp
+*.shader text
+*.cginc text
+*.hlsl text
+*.compute text
+*.raytrace text
+*.txt text
+*.json text
+*.xml text
+*.csv text
+*.md text
+*.yaml text
+*.yml text
+*.asmdef text
+*.asmref text
+*.rsp text
+*.link.xml text
+
+# ==================== UNITY META FILES (CRITICAL) ====================
+*.meta text eol=lf
