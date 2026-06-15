@@ -15,46 +15,41 @@ public class FrameItem : MonoBehaviour
     [Tooltip("Рамочка выделения кадра")]
     public Image outlineHighlight;
 
-    // Событие клика на кадр для передачи его индекса менеджеру
     private Action<int> onClickCallback;
     private int myIndex;
 
-    /// <summary>
-    /// Инициализация элемента кадра в ленте
-    /// </summary>
     public void Setup(int index, Sprite sprite, bool isSelected, Action<int> clickCallback)
     {
         myIndex = index;
         onClickCallback = clickCallback;
 
-        // Устанавливаем номер кадра (делаем человеческий индекс с 1)
         if (frameNumberText != null)
         {
             frameNumberText.text = (index + 1).ToString();
         }
 
-        // Настраиваем миниатюру
         if (thumbnailDisplay != null)
         {
+            // Включаем сохранение пропорций для миниатюры
+            thumbnailDisplay.preserveAspect = true;
+
             if (sprite != null)
             {
                 thumbnailDisplay.sprite = sprite;
-                thumbnailDisplay.color = Color.white; // Возвращаем полную видимость
+                thumbnailDisplay.color = Color.white;
             }
             else
             {
                 thumbnailDisplay.sprite = null;
-                thumbnailDisplay.color = new Color(0.7f, 0.7f, 0.7f, 0.5f); // Серый цвет, если пусто
+                thumbnailDisplay.color = new Color(0.7f, 0.7f, 0.7f, 0.5f);
             }
         }
 
-        // Показываем или скрываем рамочку выделения активного кадра
         if (outlineHighlight != null)
         {
             outlineHighlight.enabled = isSelected;
         }
 
-        // Добавляем или настраиваем кнопку клика
         Button btn = GetComponent<Button>();
         if (btn == null)
         {
@@ -65,6 +60,7 @@ public class FrameItem : MonoBehaviour
         btn.onClick.AddListener(OnItemClicked);
     }
 
+    // Этот метод вызывается при клике на элемент кадра в ленте
     private void OnItemClicked()
     {
         onClickCallback?.Invoke(myIndex);
