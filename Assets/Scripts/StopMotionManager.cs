@@ -1,13 +1,21 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using TMPro;
+using System;
 
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
+
+[System.Serializable]
+public class FrameData
+{
+    public Sprite frameSprite;
+    public float duration = 1f; // Множитель времени показа кадра
+}
 
 public class StopMotionManager : MonoBehaviour
 {
@@ -16,11 +24,8 @@ public class StopMotionManager : MonoBehaviour
     public Image onionSkinDisplay;
 
     [Header("Лента кадров (Timeline)")]
-    public RectTransform timelineContent; // Перетащите сюда Content Ленты кадров
-    public GameObject framePrefab;       // Префаб UI_Frame_Template
-
-    [Header("Библиотека импорта (Library)")]
-    public RectTransform libraryContent;  // Перетащите сюда Content Галереи слева
+    public RectTransform timelineContent;
+    public GameObject framePrefab;
 
     [Header("Настройки")]
     public Slider fpsSlider;
@@ -28,278 +33,452 @@ public class StopMotionManager : MonoBehaviour
     public Toggle onionToggle;
     public Slider onionOpacitySlider;
 
-    // Внутренние списки
-    private List<Sprite> frames = new List<Sprite>();
-    private int currentFrameIndex = -1;
-    private List<Sprite> importedLibraryImages = new List<Sprite>();
+    [Header("Статистика фильма")]
+    [Tooltip("Текст для показа общего числа кадров")]
+    public TMP_Text totalFramesText;
+    [Tooltip("Текст для показа общей длины анимации в секундах")]
+    public TMP_Text movieLengthText;
 
-    // Состояние воспроизведения
+    [Header("Кнопки управления")]
+    public Button playButton;
+    public Button duplicateButton;
+    public Button deleteButton;
+    public Button reverseButton;
+    public Button importButton;
+    public Button exportButton;
+
+    // Список кадров нашей анимации
+    private List<FrameData> timelineFrames = new List<FrameData>();
+    private int currentFrameIndex = 0;
     private bool isPlaying = false;
-    private float playbackTimer = 0f;
+    private float fps = 6f;
 
-    void Start()
+    private Coroutine playCoroutine;
+
+    private void Start()
     {
-        // Настройка дефолтных значений слайдеров
+        // Инициализация ползунков и слушателей UI
         if (fpsSlider != null)
         {
-            fpsSlider.value = 6f;
+            fpsSlider.minValue = 1f;
+            fpsSlider.maxValue = 30f;
+            fpsSlider.value = fps;
             fpsSlider.onValueChanged.AddListener(OnFpsChanged);
-            UpdateFpsText(fpsSlider.value);
-        }
-
-        if (onionOpacitySlider != null)
-        {
-            onionOpacitySlider.value = 0.5f;
-            onionOpacitySlider.onValueChanged.AddListener(OnOnionOpacityChanged);
-            UpdateOnionOpacity(onionOpacitySlider.value);
+            UpdateFpsText();
         }
 
         if (onionToggle != null)
         {
-            onionToggle.isOn = true;
             onionToggle.onValueChanged.AddListener(OnOnionToggleChanged);
         }
 
-        UpdatePreview();
+        if (onionOpacitySlider != null)
+        {
+            onionOpacitySlider.minValue = 0f;
+            onionOpacitySlider.maxValue = 1f;
+            onionOpacitySlider.value = 0.35f;
+            onionOpacitySlider.onValueChanged.AddListener(OnOnionOpacityChanged);
+        }
+
+        // Подключаем слушатели для кнопок
+        if (playButton != null) playButton.onClick.AddListener(TogglePlayback);
+        if (duplicateButton != null) duplicateButton.onClick.AddListener(DuplicateCurrentFrame);
+        if (deleteButton != null) deleteButton.onClick.AddListener(DeleteCurrentFrame);
+        if (reverseButton != null) reverseButton.onClick.AddListener(ReverseTimeline);
+        if (importButton != null) importButton.onClick.AddListener(ImportImages);
+        if (exportButton != null) exportButton.onClick.AddListener(ExportAnimation);
+
+        // Создаем стартовую пустышку, чтобы экран не был совсем серым
+        CreateInitialScene();
+        UpdateUI();
     }
 
-    void Update()
+    private void CreateInitialScene()
     {
-        if (isPlaying && frames.Count > 0)
+        // Добавляем один стартовый пустой кадр
+        FrameData initialFrame = new FrameData { frameSprite = null };
+        timelineFrames.Add(initialFrame);
+        currentFrameIndex = 0;
+    }
+
+    private void OnFpsChanged(float value)
+    {
+        fps = Mathf.Round(value);
+        UpdateFpsText();
+        UpdateStatistics();
+    }
+
+    private void UpdateFpsText()
+    {
+        if (fpsText != null)
         {
-            playbackTimer += Time.deltaTime;
-            float interval = 1f / (fpsSlider != null ? fpsSlider.value : 6f);
-            if (playbackTimer >= interval)
-            {
-                playbackTimer = 0f;
-                currentFrameIndex = (currentFrameIndex + 1) % frames.Count;
-                UpdatePreview();
-                HighlightTimelineFrame(currentFrameIndex);
-            }
+            fpsText.text = $"{fps} кадр/сек";
         }
     }
 
-    // --- ФУНКЦИЯ ИМПОРТА КАРТИНКИ С ДИСКА ---
-    public void ImportImageFromDisk()
+    private void OnOnionToggleChanged(bool value)
     {
-        string path = "";
+        UpdateOnionSkin();
+    }
 
-#if UNITY_EDITOR
-        // Открывает стандартный проводник OS в редакторе Unity
-        path = EditorUtility.OpenFilePanel("Выберите изображение для анимации", "", "png,jpg,jpeg");
-#else
-        Debug.Log("Импорт файлов в сборке настроен через NativeGallery или системный медиа-проигрыватель.");
-#endif
+    private void OnOnionOpacityChanged(float value)
+    {
+        UpdateOnionSkin();
+    }
 
-        if (!string.IsNullOrEmpty(path))
+    /// <summary>
+    /// Переключение воспроизведения Анимации
+    /// </summary>
+    public void TogglePlayback()
+    {
+        if (isPlaying)
         {
-            byte[] fileData = File.ReadAllBytes(path);
-            Texture2D texture = new Texture2D(2, 2);
-            if (texture.LoadImage(fileData))
-            {
-                Sprite newSprite = Sprite.Create(
-                    texture,
-                    new Rect(0, 0, texture.width, texture.height),
-                    new Vector2(0.5f, 0.5f)
-                );
-
-                AddImageToLibrary(newSprite);
-            }
+            StopAnimation();
+        }
+        else
+        {
+            StartAnimation();
         }
     }
 
-    // Добавление в галерею слева
-    private void AddImageToLibrary(Sprite sprite)
+    private void StartAnimation()
     {
-        importedLibraryImages.Add(sprite);
-
-        // Спавним ячейку в левой галерее
-        if (libraryContent != null && framePrefab != null)
+        if (timelineFrames.Count == 0) return;
+        isPlaying = true;
+        if (playButton != null)
         {
-            GameObject newItem = Instantiate(framePrefab, libraryContent, false);
-            FrameItem itemScript = newItem.GetComponent<FrameItem>();
-            if (itemScript != null)
+            TMP_Text btnText = playButton.GetComponentInChildren<TMP_Text>();
+            if (btnText != null) btnText.text = "Пауза";
+        }
+        playCoroutine = StartCoroutine(PlayAnimationLoop());
+    }
+
+    private void StopAnimation()
+    {
+        isPlaying = false;
+        if (playCoroutine != null)
+        {
+            StopCoroutine(playCoroutine);
+        }
+        if (playButton != null)
+        {
+            TMP_Text btnText = playButton.GetComponentInChildren<TMP_Text>();
+            if (btnText != null) btnText.text = "Запуск";
+        }
+        UpdateUI();
+    }
+
+    private IEnumerator PlayAnimationLoop()
+    {
+        while (isPlaying && timelineFrames.Count > 0)
+        {
+            currentFrameIndex = (currentFrameIndex + 1) % timelineFrames.Count;
+            UpdateUI();
+            yield return new WaitForSeconds(1f / fps);
+        }
+    }
+
+    /// <summary>
+    /// Выбор конкретного кадра
+    /// </summary>
+    public void SelectFrame(int index)
+    {
+        if (isPlaying) StopAnimation();
+        if (index >= 0 && index < timelineFrames.Count)
+        {
+            currentFrameIndex = index;
+            UpdateUI();
+        }
+    }
+
+    /// <summary>
+    /// Дублирование текущего кадра
+    /// </summary>
+    public void DuplicateCurrentFrame()
+    {
+        if (timelineFrames.Count == 0 || currentFrameIndex < 0) return;
+        if (isPlaying) StopAnimation();
+
+        FrameData current = timelineFrames[currentFrameIndex];
+        FrameData copy = new FrameData
+        {
+            frameSprite = current.frameSprite,
+            duration = current.duration
+        };
+
+        timelineFrames.Insert(currentFrameIndex + 1, copy);
+        currentFrameIndex++;
+        UpdateUI();
+    }
+
+    /// <summary>
+    /// Удаление выбранного кадра
+    /// </summary>
+    public void DeleteCurrentFrame()
+    {
+        if (timelineFrames.Count <= 1)
+        {
+            Debug.LogWarning("Нельзя удалить единственный кадр!");
+            return;
+        }
+        if (isPlaying) StopAnimation();
+
+        timelineFrames.RemoveAt(currentFrameIndex);
+        if (currentFrameIndex >= timelineFrames.Count)
+        {
+            currentFrameIndex = timelineFrames.Count - 1;
+        }
+        UpdateUI();
+    }
+
+    /// <summary>
+    /// Реверс всей ленты кадров задом наперед
+    /// </summary>
+    public void ReverseTimeline()
+    {
+        if (timelineFrames.Count <= 1) return;
+        if (isPlaying) StopAnimation();
+
+        timelineFrames.Reverse();
+        currentFrameIndex = 0;
+        UpdateUI();
+    }
+
+    /// <summary>
+    /// Обновление визуального представления интерфейса
+    /// </summary>
+    public void UpdateUI()
+    {
+        if (timelineFrames.Count == 0) return;
+
+        FrameData activeFrame = timelineFrames[currentFrameIndex];
+
+        // Отображение активного кадра на холсте
+        if (activeFrameDisplay != null)
+        {
+            if (activeFrame.frameSprite != null)
             {
-                int index = importedLibraryImages.Count - 1;
-                // При клике на фото в библиотеке — оно отправляется на таймлайн!
-                itemScript.Setup(sprite, index + 1, false, () => {
-                    AddFrameToTimeline(sprite);
-                });
+                activeFrameDisplay.sprite = activeFrame.frameSprite;
+                activeFrameDisplay.color = Color.white;
+            }
+            else
+            {
+                activeFrameDisplay.sprite = null;
+                activeFrameDisplay.color = Color.white; // Белое полотно-черновик
             }
         }
 
-        // Также автоматически добавляем эту картинку в таймлайн в качестве нового кадра
-        AddFrameToTimeline(sprite);
+        UpdateOnionSkin();
+        RedrawTimeline();
+        UpdateStatistics();
     }
 
-    // Добавление кадра в ленту снизу
-    public void AddFrameToTimeline(Sprite sprite)
+    /// <summary>
+    /// Расчет Onion Skin (эффект прозрачности подложки для прошлого кадра)
+    /// </summary>
+    private void UpdateOnionSkin()
     {
-        frames.Add(sprite);
-        currentFrameIndex = frames.Count - 1;
+        if (onionSkinDisplay == null) return;
 
-        RebuildTimelineUI();
-        UpdatePreview();
+        bool showOnion = onionToggle != null && onionToggle.isOn;
+
+        // Показываем подложку только если это включено в UI, проект на паузе и есть прошлый кадр
+        if (showOnion && !isPlaying && currentFrameIndex > 0)
+        {
+            FrameData prevFrame = timelineFrames[currentFrameIndex - 1];
+            if (prevFrame.frameSprite != null)
+            {
+                onionSkinDisplay.sprite = prevFrame.frameSprite;
+                float opacity = onionOpacitySlider != null ? onionOpacitySlider.value : 0.35f;
+                onionSkinDisplay.color = new Color(1f, 1f, 1f, opacity);
+                onionSkinDisplay.gameObject.SetActive(true);
+                return;
+            }
+        }
+
+        // Если условий нет — выключаем отображение onion skin
+        onionSkinDisplay.gameObject.SetActive(false);
     }
 
-    // Полное обновление UI ленты
-    private void RebuildTimelineUI()
+    /// <summary>
+    /// Полная перерисовка нижнего таймлайна (ленты кадров)
+    /// </summary>
+    private void RedrawTimeline()
     {
+        if (timelineContent == null || framePrefab == null) return;
+
+        // Чистим старые объекты в ленте
         foreach (Transform child in timelineContent)
         {
             Destroy(child.gameObject);
         }
 
-        for (int i = 0; i < frames.Count; i++)
+        // Спавним префабы для выстраивания ленты
+        for (int i = 0; i < timelineFrames.Count; i++)
         {
-            GameObject newFrameObj = Instantiate(framePrefab, timelineContent, false);
-            newFrameObj.name = "Frame_" + i;
+            GameObject frameObj = Instantiate(framePrefab, timelineContent);
+            FrameItem itemComponent = frameObj.GetComponent<FrameItem>();
 
-            FrameItem itemScript = newFrameObj.GetComponent<FrameItem>();
-            if (itemScript != null)
+            if (itemComponent != null)
             {
-                int frameIdx = i;
-                bool isSelected = (frameIdx == currentFrameIndex);
-                itemScript.Setup(frames[frameIdx], frameIdx + 1, isSelected, () => {
-                    SelectFrame(frameIdx);
-                });
+                bool isSelected = (i == currentFrameIndex);
+                itemComponent.Setup(i, timelineFrames[i].frameSprite, isSelected, SelectFrame);
             }
         }
     }
 
-    public void SelectFrame(int index)
+    /// <summary>
+    /// Перерасчет статистики по фильму
+    /// </summary>
+    private void UpdateStatistics()
     {
-        if (index >= 0 && index < frames.Count)
+        // 1. Обновляем количество кадров
+        if (totalFramesText != null)
         {
-            currentFrameIndex = index;
-            isPlaying = false; // Останавливаем воспроизведение при ручном выборе
-            UpdatePreview();
-            HighlightTimelineFrame(currentFrameIndex);
+            totalFramesText.text = $"{timelineFrames.Count} кадров";
+        }
+
+        // 2. Рассчитываем длину фильма
+        if (movieLengthText != null)
+        {
+            float lengthInSeconds = (float)timelineFrames.Count / fps;
+            movieLengthText.text = $"{lengthInSeconds:F2} сек";
         }
     }
 
-    private void HighlightTimelineFrame(int index)
+    /// <summary>
+    /// Функция Импорта картинок из проводника на ПК
+    /// </summary>
+    public void ImportImages()
     {
-        for (int i = 0; i < timelineContent.childCount; i++)
+        if (isPlaying) StopAnimation();
+
+#if UNITY_EDITOR
+        // Запускаем нативный диалог открытия файлов в Unity Editor
+        string path = EditorUtility.OpenFilePanel("Выберите картинку для импорта", "", "png,jpg,jpeg");
+        if (!string.IsNullOrEmpty(path))
         {
-            Transform child = timelineContent.GetChild(i);
-            FrameItem itemScript = child.GetComponent<FrameItem>();
-            if (itemScript != null)
+            LoadImageFromPath(path);
+        }
+#else
+        // В Standalone билдах мы можем загружать картинку из папки проекта / С рабочего стола
+        string desktopPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop);
+        Debug.Log($"Ожидаем файлы в папке: {desktopPath}. В билде рекомендуется использовать StandaloneFileBrowser.");
+#endif
+    }
+
+    private void LoadImageFromPath(string path)
+    {
+        if (!File.Exists(path)) return;
+
+        byte[] fileData = File.ReadAllBytes(path);
+        Texture2D texture = new Texture2D(2, 2);
+        if (texture.LoadImage(fileData))
+        {
+            Sprite newSprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f));
+
+            // Если у нас в ленте был всего один пустой стартовый кадр, заменим его
+            if (timelineFrames.Count == 1 && timelineFrames[0].frameSprite == null)
             {
-                itemScript.SetHighlight(i == index);
-            }
-        }
-    }
-
-    // --- КНОПКИ ПАНЕЛИ КАДРОВ ---
-
-    public void TogglePlayback()
-    {
-        if (frames.Count == 0) return;
-        isPlaying = !isPlaying;
-        playbackTimer = 0f;
-    }
-
-    public void DuplicateActiveFrame()
-    {
-        if (currentFrameIndex >= 0 && currentFrameIndex < frames.Count)
-        {
-            Sprite activeSprite = frames[currentFrameIndex];
-            frames.Insert(currentFrameIndex + 1, activeSprite);
-            currentFrameIndex++;
-            RebuildTimelineUI();
-            UpdatePreview();
-        }
-    }
-
-    public void DeleteActiveFrame()
-    {
-        if (frames.Count == 0) return;
-        if (currentFrameIndex >= 0 && currentFrameIndex < frames.Count)
-        {
-            frames.RemoveAt(currentFrameIndex);
-            if (currentFrameIndex >= frames.Count)
-            {
-                currentFrameIndex = frames.Count - 1;
-            }
-            RebuildTimelineUI();
-            UpdatePreview();
-        }
-    }
-
-    public void ReverseTimeline()
-    {
-        if (frames.Count < 2) return;
-        frames.Reverse();
-        currentFrameIndex = 0;
-        RebuildTimelineUI();
-        UpdatePreview();
-    }
-
-    // --- ОБНОВЛЕНИЕ ЭКРАНА И ONION SKIN ---
-    private void UpdatePreview()
-    {
-        if (frames.Count == 0)
-        {
-            if (activeFrameDisplay != null) activeFrameDisplay.gameObject.SetActive(false);
-            if (onionSkinDisplay != null) onionSkinDisplay.gameObject.SetActive(false);
-            return;
-        }
-
-        if (activeFrameDisplay != null && currentFrameIndex >= 0 && currentFrameIndex < frames.Count)
-        {
-            activeFrameDisplay.sprite = frames[currentFrameIndex];
-            activeFrameDisplay.gameObject.SetActive(true);
-        }
-
-        if (onionSkinDisplay != null)
-        {
-            bool showOnion = onionToggle != null ? onionToggle.isOn : true;
-            int prevIdx = currentFrameIndex - 1;
-
-            if (showOnion && prevIdx >= 0 && prevIdx < frames.Count)
-            {
-                onionSkinDisplay.sprite = frames[prevIdx];
-                onionSkinDisplay.gameObject.SetActive(true);
+                timelineFrames[0].frameSprite = newSprite;
             }
             else
             {
-                onionSkinDisplay.gameObject.SetActive(false);
+                // Иначе добавляем новый кадр в конец очереди
+                FrameData newFrame = new FrameData { frameSprite = newSprite };
+                timelineFrames.Add(newFrame);
+                currentFrameIndex = timelineFrames.Count - 1;
             }
+
+            UpdateUI();
         }
     }
 
-    // --- НАСТРОЙКИ СЛАЙДЕРОВ ---
-    private void OnFpsChanged(float value)
+    /// <summary>
+    /// Функция ЭКСПОРТА фильма! Открывает проводник для сохранения PNG-последовательности кадров.
+    /// Это надежный, классический способ для стоп-моушна, позволяющий получить высокое качество.
+    /// </summary>
+    public void ExportAnimation()
     {
-        UpdateFpsText(value);
-    }
-
-    private void UpdateFpsText(float value)
-    {
-        if (fpsText != null)
+        if (timelineFrames.Count == 0 || (timelineFrames.Count == 1 && timelineFrames[0].frameSprite == null))
         {
-            fpsText.text = Mathf.RoundToInt(value) + " кадр/сек";
+            Debug.LogError("Нечего экспортировать! Добавьте кадры в ленту.");
+            return;
         }
-    }
 
-    private void OnOnionToggleChanged(bool isOn)
-    {
-        UpdatePreview();
-    }
+        if (isPlaying) StopAnimation();
 
-    private void OnOnionOpacityChanged(float value)
-    {
-        UpdateOnionOpacity(value);
-    }
+        string targetFolder = "";
 
-    private void UpdateOnionOpacity(float value)
-    {
-        if (onionSkinDisplay != null)
+#if UNITY_EDITOR
+        // Открываем проводник для выбора папки, куда сохранить кадры
+        targetFolder = EditorUtility.SaveFolderPanel("Выберите папку для сохранения фильма (Кадров)", "", "StopMotionFilm");
+#else
+        // В собранной игре сохраняем в папку документов пользователя
+        targetFolder = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments), "StopMotionFilm_" + DateTime.Now.ToString("yyyyMMdd_HHmmss"));
+        Directory.CreateDirectory(targetFolder);
+#endif
+
+        if (!string.IsNullOrEmpty(targetFolder))
         {
-            Color col = onionSkinDisplay.color;
-            col.a = value;
-            onionSkinDisplay.color = col;
+            StartCoroutine(ExportFramesCoroutine(targetFolder));
         }
+    }
+
+    private IEnumerator ExportFramesCoroutine(string folderPath)
+    {
+        Debug.Log($"Начало экспорта кадров в: {folderPath}");
+
+        for (int i = 0; i < timelineFrames.Count; i++)
+        {
+            Sprite sprite = timelineFrames[i].frameSprite;
+            if (sprite != null)
+            {
+                Texture2D tex = sprite.texture;
+
+                // Создаем временную текстуру для чтения/записи, чтобы избежать ошибок Read/Write Enabled на импортированных картинках
+                Texture2D readableTex = new Texture2D(tex.width, tex.height, TextureFormat.RGBA32, false);
+
+                // Чтобы скопировать пиксели, активируем рендер-текстуру
+                RenderTexture tempRT = RenderTexture.GetTemporary(tex.width, tex.height, 0, RenderTextureFormat.Default, RenderTextureReadWrite.Linear);
+                Graphics.Blit(tex, tempRT);
+                RenderTexture previousActive = RenderTexture.active;
+                RenderTexture.active = tempRT;
+
+                readableTex.ReadPixels(new Rect(0, 0, tempRT.width, tempRT.height), 0, 0);
+                readableTex.Apply();
+
+                RenderTexture.active = previousActive;
+                RenderTexture.ReleaseTemporary(tempRT);
+
+                // Кодируем в PNG
+                byte[] bytes = readableTex.EncodeToPNG();
+                Destroy(readableTex);
+
+                // Имя файла с красивым индексом (например kadr_001.png, kadr_002.png)
+                string fileName = $"kadr_{i + 1:D3}.png";
+                string fullPath = Path.Combine(folderPath, fileName);
+
+                File.WriteAllBytes(fullPath, bytes);
+            }
+            yield return null; // Предотвращаем зависание Unity при экспорте сотен кадров
+        }
+
+        // Сохраняем текстовый файлик-инструкцию, как склеить в MP4 с помощью бесплатной утилиты ffmpeg
+        string readmePath = Path.Combine(folderPath, "инструкция_по_склейке.txt");
+        string readmeContent = $"Ваша стоп-моушн анимация успешно экспортирована!\n" +
+                               $"Всего кадров: {timelineFrames.Count} шт.\n" +
+                               $"Выбранный FPS: {fps} кадров в сек.\n" +
+                               $"Длина ролика: {(float)timelineFrames.Count / fps:F2} сек.\n\n" +
+                               $"Вы можете соединить эти кадры в красивое Full-HD MP4 видео с помощью любой бесплатной монтажной программы (CapCut, Premiere Pro, Vegas, DaVinci) или использовать одну команду FFMPEG:\n" +
+                               $"ffmpeg -r {fps} -i kadr_%03d.png -c:v libx264 -pix_fmt yuv420p video.mp4";
+
+        File.WriteAllText(readmePath, readmeContent);
+
+        Debug.Log($"Экспорт успешно завершен! Создано {timelineFrames.Count} файлов кадра в папке: {folderPath}");
+
+#if UNITY_EDITOR
+        EditorUtility.RevealInFinder(folderPath); // Фокусируем проводник на папке с файлами!
+#endif
     }
 }

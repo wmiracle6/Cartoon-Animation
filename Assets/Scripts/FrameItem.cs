@@ -6,50 +6,67 @@ using System;
 public class FrameItem : MonoBehaviour
 {
     [Header("Элементы UI кадра")]
-    public Image thumbnailDisplay;       // Ваше ThumbnailImage (Image)
-    public TMP_Text frameNumberText;    // Ваше IndexText (TextMeshPro)
-    public Image outlineHighlight;      // Фоновая рамка выделения (по желанию, необязательно)
+    [Tooltip("Ссылка на изображение миниатюры")]
+    public Image thumbnailDisplay;
 
-    private Action onClickAction;
+    [Tooltip("Ссылка на текстовое поле с номером кадра")]
+    public TMP_Text frameNumberText;
 
-    public void Setup(Sprite sprite, int number, bool isSelected, Action clickAction)
+    [Tooltip("Рамочка выделения кадра")]
+    public Image outlineHighlight;
+
+    // Событие клика на кадр для передачи его индекса менеджеру
+    private Action<int> onClickCallback;
+    private int myIndex;
+
+    /// <summary>
+    /// Инициализация элемента кадра в ленте
+    /// </summary>
+    public void Setup(int index, Sprite sprite, bool isSelected, Action<int> clickCallback)
     {
-        if (thumbnailDisplay != null)
-        {
-            thumbnailDisplay.sprite = sprite;
-        }
+        myIndex = index;
+        onClickCallback = clickCallback;
 
+        // Устанавливаем номер кадра (делаем человеческий индекс с 1)
         if (frameNumberText != null)
         {
-            frameNumberText.text = number.ToString();
+            frameNumberText.text = (index + 1).ToString();
         }
 
-        onClickAction = clickAction;
-
-        SetHighlight(isSelected);
-
-        // Автоматически подвязываем клик, если на префабе есть компонент Button
-        Button btn = GetComponent<Button>();
-        if (btn != null)
+        // Настраиваем миниатюру
+        if (thumbnailDisplay != null)
         {
-            btn.onClick.RemoveAllListeners();
-            btn.onClick.AddListener(OnItemClicked);
+            if (sprite != null)
+            {
+                thumbnailDisplay.sprite = sprite;
+                thumbnailDisplay.color = Color.white; // Возвращаем полную видимость
+            }
+            else
+            {
+                thumbnailDisplay.sprite = null;
+                thumbnailDisplay.color = new Color(0.7f, 0.7f, 0.7f, 0.5f); // Серый цвет, если пусто
+            }
         }
-    }
 
-    public void SetHighlight(bool isSelected)
-    {
+        // Показываем или скрываем рамочку выделения активного кадра
         if (outlineHighlight != null)
         {
-            outlineHighlight.gameObject.SetActive(isSelected);
+            outlineHighlight.enabled = isSelected;
         }
+
+        // Добавляем или настраиваем кнопку клика
+        Button btn = GetComponent<Button>();
+        if (btn == null)
+        {
+            btn = gameObject.AddComponent<Button>();
+        }
+
+        btn.onClick.RemoveAllListeners();
+        btn.onClick.AddListener(OnItemClicked);
     }
 
     private void OnItemClicked()
     {
-        if (onClickAction != null)
-        {
-            onClickAction.Invoke();
-        }
+        onClickCallback?.Invoke(myIndex);
     }
 }

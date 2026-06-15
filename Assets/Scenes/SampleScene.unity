@@ -1773,7 +1773,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 2124226773}
   m_HandleRect: {fileID: 2124226772}
   m_Direction: 2
-  m_Value: 1
+  m_Value: 0
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -2039,7 +2039,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 2038494734}
         m_TargetAssemblyTypeName: StopMotionManager, Assembly-CSharp
-        m_MethodName: DuplicateActiveFrame
+        m_MethodName: 
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -2299,7 +2299,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 2038494734}
         m_TargetAssemblyTypeName: StopMotionManager, Assembly-CSharp
-        m_MethodName: ImportImageFromDisk
+        m_MethodName: 
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -2597,7 +2597,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 2038494734}
         m_TargetAssemblyTypeName: StopMotionManager, Assembly-CSharp
-        m_MethodName: TogglePlayback
+        m_MethodName: 
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -3047,7 +3047,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 2038494734}
         m_TargetAssemblyTypeName: StopMotionManager, Assembly-CSharp
-        m_MethodName: DeleteActiveFrame
+        m_MethodName: 
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -3329,7 +3329,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1208104135}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2038494734}
+        m_TargetAssemblyTypeName: StopMotionManager, Assembly-CSharp
+        m_MethodName: 
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1208104135
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4652,7 +4664,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 2038494734}
         m_TargetAssemblyTypeName: StopMotionManager, Assembly-CSharp
-        m_MethodName: ReverseTimeline
+        m_MethodName: 
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -5341,11 +5353,18 @@ MonoBehaviour:
   onionSkinDisplay: {fileID: 2003828178}
   timelineContent: {fileID: 1405569705}
   framePrefab: {fileID: 8717207307513128864, guid: b848e49cedf8e94479a25cfbff3726c6, type: 3}
-  libraryContent: {fileID: 232598574}
   fpsSlider: {fileID: 1114530626}
   fpsText: {fileID: 109476372}
   onionToggle: {fileID: 1692012511}
   onionOpacitySlider: {fileID: 1110420190}
+  totalFramesText: {fileID: 0}
+  movieLengthText: {fileID: 0}
+  playButton: {fileID: 981360559}
+  duplicateButton: {fileID: 829574500}
+  deleteButton: {fileID: 1131241560}
+  reverseButton: {fileID: 1875588038}
+  importButton: {fileID: 898671865}
+  exportButton: {fileID: 1208104134}
 --- !u!4 &2038494735
 Transform:
   m_ObjectHideFlags: 0
