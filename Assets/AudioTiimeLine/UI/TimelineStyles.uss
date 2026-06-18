@@ -1,0 +1,62 @@
+#timeline-container {
+    flex-grow: 1;
+    background-color: #1E1E1E; /* Dark Premiere style */
+    color: #CCCCCC;
+}
+
+#toolbar {
+    height: 30px;
+    background-color: #2D2D2D;
+    flex-direction: row;
+    align-items: center;
+    border-bottom-width: 1px;
+    border-bottom-color: #111111;
+}
+
+.audio-track {
+    height: 80px;
+    flex-direction: row;
+    border-bottom-width: 1px;
+    border-bottom-color: #333333;
+}
+
+.track-header {
+    width: 150px;
+    background-color: #252526;
+    border-right-width: 1px;
+    border-right-color: #111111;
+    padding: 5px;
+}
+
+.track-body {
+    flex-grow: 1;
+    background-color: #2A2D30;
+    position: relative; /* Важно для position: absolute у детей */
+}
+
+.audio-clip {
+    height: 100%;
+    background-color: #2C5D63; /* Теплый зеленый/синий оттенок аудио */
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: #4FB0C6;
+    overflow: hidden;
+}
+
+.clip-handle-left, .clip-handle-right {
+    position: absolute;
+    width: 8px;
+    height: 100%;
+    background-color: rgba(255,255,255,0.2);
+    cursor: slide-arrow;
+}
+.clip-handle-right { right: 0; }
+.clip-handle-left { left: 0; }
+
+.volume-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 2px;
+    background-color: #FFFFFF;
+    margin-top: -1px;
+}

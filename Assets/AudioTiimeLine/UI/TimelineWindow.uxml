@@ -1,0 +1,14 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="TimelineStyles.uss" />
+    <ui:VisualElement name="timeline-container">
+        <ui:VisualElement name="toolbar">
+            <ui:Button name="btn-add-track" text="+ Add Track" />
+            <ui:Slider name="zoom-slider" label="Zoom" low-value="10" high-value="500" value="100"/>
+        </ui:VisualElement>
+        
+        <ui:ScrollView name="track-scroll-view" mode="HorizontalAndVertical">
+            <ui:VisualElement name="track-list">
+                </ui:VisualElement>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>
