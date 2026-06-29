@@ -46,6 +46,7 @@ public class StopMotionWithAudio : MonoBehaviour
     public Button importImageButton;
     public Button importFolderButton;
     public Button exportButton;
+    public Button createEmptyCanvasButton; // Новая кнопка создания чистого листа
 
     [Header("=== ПОВОРОТ ИЗОБРАЖЕНИЙ ===")]
     public Button rotateCurrentButton;   // Повернуть текущий кадр
@@ -62,9 +63,10 @@ public class StopMotionWithAudio : MonoBehaviour
     public TMP_Text totalFramesText;
     public TMP_Text movieLengthText;
 
-    // ===== ВНУТРЕННИЕ ДАННЫЕ =====
-    private List<FrameItemData> timelineFrames = new List<FrameItemData>();
-    private int currentFrameIndex = 0;
+    // ===== ВНУТРЕННИЕ ДАННЫЕ (ИЗМЕНЕНО НА PUBLIC ДЛЯ РИСОВАЛКИ) =====
+    public List<FrameItemData> timelineFrames = new List<FrameItemData>();
+    public int currentFrameIndex = 0;
+
     private bool isPlaying = false;
     private float fps = 6f;
     private Coroutine playCoroutine;
@@ -118,6 +120,10 @@ public class StopMotionWithAudio : MonoBehaviour
         if (importFolderButton != null) importFolderButton.onClick.AddListener(ImportFolder);
         if (exportButton != null) exportButton.onClick.AddListener(ExportAnimation);
 
+        // Подключение новой кнопки создания чистого листа
+        if (createEmptyCanvasButton != null)
+            createEmptyCanvasButton.onClick.AddListener(CreateEmptyCanvas);
+
         // === КНОПКИ ПОВОРОТА ===
         if (rotateCurrentButton != null) rotateCurrentButton.onClick.AddListener(RotateCurrentFrame);
         if (rotateAllButton != null) rotateAllButton.onClick.AddListener(RotateAllFrames);
@@ -144,6 +150,46 @@ public class StopMotionWithAudio : MonoBehaviour
     {
         timelineFrames.Add(new FrameItemData { frameSprite = null });
         currentFrameIndex = 0;
+    }
+
+    // =========================================================
+    // ============= СОЗДАНИЕ ПУСТОГО ХОЛСТА ===================
+    // =========================================================
+    public void CreateEmptyCanvas()
+    {
+        if (isPlaying) StopAnimation();
+
+        // Создаем чистую белую текстуру 1024x768
+        int width = 1024;
+        int height = 768;
+        Texture2D newTexture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        Color[] whitePixels = new Color[width * height];
+        for (int i = 0; i < whitePixels.Length; i++)
+        {
+            whitePixels[i] = Color.white;
+        }
+        newTexture.SetPixels(whitePixels);
+        newTexture.Apply();
+
+        Sprite newSprite = Sprite.Create(
+            newTexture,
+            new Rect(0, 0, width, height),
+            new Vector2(0.5f, 0.5f)
+        );
+
+        // Если у нас в начале стоит единственный пустой кадр, перезаписываем его
+        if (timelineFrames.Count == 1 && timelineFrames[0].frameSprite == null)
+        {
+            timelineFrames[0].frameSprite = newSprite;
+        }
+        else
+        {
+            timelineFrames.Add(new FrameItemData { frameSprite = newSprite });
+            currentFrameIndex = timelineFrames.Count - 1;
+        }
+
+        UpdateUI();
+        Debug.Log("Создан новый пустой холст для рисования!");
     }
 
     // =========================================================
@@ -304,7 +350,7 @@ public class StopMotionWithAudio : MonoBehaviour
     {
         if (timelineFrames.Count <= 1)
         {
-            UnityEngine.Debug.LogWarning("Нельзя удалить единственный кадр!");
+            Debug.LogWarning("Нельзя удалить единственный кадр!");
             return;
         }
         if (isPlaying) StopAnimation();
@@ -360,14 +406,14 @@ public class StopMotionWithAudio : MonoBehaviour
 
         if (timelineFrames.Count == 0 || currentFrameIndex < 0)
         {
-            UnityEngine.Debug.LogWarning("Нет кадров для поворота!");
+            Debug.LogWarning("Нет кадров для поворота!");
             return;
         }
 
         FrameItemData current = timelineFrames[currentFrameIndex];
         if (current.frameSprite == null)
         {
-            UnityEngine.Debug.LogWarning("Текущий кадр пустой!");
+            Debug.LogWarning("Текущий кадр пустой!");
             return;
         }
 
@@ -380,7 +426,7 @@ public class StopMotionWithAudio : MonoBehaviour
 
             current.frameSprite = rotated;
             UpdateUI();
-            UnityEngine.Debug.Log($"Кадр {currentFrameIndex + 1} повернут на 90 градусов");
+            Debug.Log($"Кадр {currentFrameIndex + 1} повернут на 90 градусов");
         }
     }
 
@@ -391,7 +437,7 @@ public class StopMotionWithAudio : MonoBehaviour
 
         if (timelineFrames.Count == 0)
         {
-            UnityEngine.Debug.LogWarning("Нет кадров для поворота!");
+            Debug.LogWarning("Нет кадров для поворота!");
             return;
         }
 
@@ -416,11 +462,11 @@ public class StopMotionWithAudio : MonoBehaviour
         if (rotatedCount > 0)
         {
             UpdateUI();
-            UnityEngine.Debug.Log($"Повернуто {rotatedCount} кадров на 90 градусов");
+            Debug.Log($"Повернуто {rotatedCount} кадров на 90 градусов");
         }
         else
         {
-            UnityEngine.Debug.LogWarning("Не удалось повернуть ни одного кадра!");
+            Debug.LogWarning("Не удалось повернуть ни одного кадра!");
         }
     }
 
@@ -566,15 +612,15 @@ public class StopMotionWithAudio : MonoBehaviour
         string path = EditorUtility.OpenFilePanel("Выберите изображение", "", "png,jpg,jpeg,bmp,tga,psd,gif,tiff");
         if (!string.IsNullOrEmpty(path) && File.Exists(path))
         {
-            UnityEngine.Debug.Log($"Импорт одного изображения: {path}");
+            Debug.Log($"Импорт одного изображения: {path}");
             LoadImageFromPath(path);
         }
         else
         {
-            UnityEngine.Debug.Log("Импорт отменён");
+            Debug.Log("Импорт отменён");
         }
 #else
-        UnityEngine.Debug.Log("В билде импорт изображений через NativePicker или StreamingAssets");
+        Debug.Log("В билде импорт изображений через NativePicker или StreamingAssets");
 #endif
     }
 
@@ -622,20 +668,20 @@ public class StopMotionWithAudio : MonoBehaviour
                     return string.Compare(fileNameA, fileNameB, StringComparison.OrdinalIgnoreCase);
                 });
 
-                UnityEngine.Debug.Log($"Найдено {imageFiles.Count} изображений в папке. Начинаю загрузку...");
+                Debug.Log($"Найдено {imageFiles.Count} изображений в папке. Начинаю загрузку...");
                 StartCoroutine(LoadMultipleImages(imageFiles.ToArray()));
             }
             else
             {
-                UnityEngine.Debug.LogWarning("В выбранной папке нет поддерживаемых изображений!");
+                Debug.LogWarning("В выбранной папке нет поддерживаемых изображений!");
             }
         }
         else
         {
-            UnityEngine.Debug.Log("Импорт отменён");
+            Debug.Log("Импорт отменён");
         }
 #else
-    UnityEngine.Debug.Log("В билде импорт изображений через NativePicker или StreamingAssets");
+        Debug.Log("В билде импорт изображений через NativePicker или StreamingAssets");
 #endif
     }
 
@@ -690,7 +736,7 @@ public class StopMotionWithAudio : MonoBehaviour
             if (string.IsNullOrEmpty(path)) continue;
             if (!File.Exists(path))
             {
-                UnityEngine.Debug.LogWarning($"Файл не найден: {path}");
+                Debug.LogWarning($"Файл не найден: {path}");
                 errorCount++;
                 continue;
             }
@@ -730,7 +776,7 @@ public class StopMotionWithAudio : MonoBehaviour
             }
             else
             {
-                UnityEngine.Debug.LogError($"Не удалось загрузить изображение: {path}");
+                Debug.LogError($"Не удалось загрузить изображение: {path}");
                 errorCount++;
                 Destroy(texture);
             }
@@ -740,11 +786,11 @@ public class StopMotionWithAudio : MonoBehaviour
         {
             currentFrameIndex = timelineFrames.Count - 1;
             UpdateUI();
-            UnityEngine.Debug.Log($"Загружено {loadedCount} изображений. Ошибок: {errorCount}");
+            Debug.Log($"Загружено {loadedCount} изображений. Ошибок: {errorCount}");
         }
         else
         {
-            UnityEngine.Debug.LogWarning("Не удалось загрузить ни одного изображения!");
+            Debug.LogWarning("Не удалось загрузить ни одного изображения!");
             if (timelineFrames.Count == 0)
             {
                 CreateInitialScene();
@@ -770,7 +816,7 @@ public class StopMotionWithAudio : MonoBehaviour
             LoadAudioFromPath(path);
         }
 #else
-    UnityEngine.Debug.Log("В билде импорт аудио через NativePicker");
+        Debug.Log("В билде импорт аудио через NativePicker");
 #endif
     }
 
@@ -790,7 +836,7 @@ public class StopMotionWithAudio : MonoBehaviour
         }
         catch (Exception e)
         {
-            UnityEngine.Debug.LogError($"Ошибка импорта аудио: {e.Message}");
+            Debug.LogError($"Ошибка импорта аудио: {e.Message}");
         }
     }
 
@@ -817,7 +863,7 @@ public class StopMotionWithAudio : MonoBehaviour
                     float movieDuration = (float)timelineFrames.Count / fps;
                     if (clip.length > movieDuration)
                     {
-                        UnityEngine.Debug.LogWarning($"Аудио ({clip.length:F2} сек) длиннее анимации ({movieDuration:F2} сек)!");
+                        Debug.LogWarning($"Аудио ({clip.length:F2} сек) длиннее анимации ({movieDuration:F2} сек)!");
                     }
 
                     // Устанавливаем громкость при загрузке
@@ -830,17 +876,17 @@ public class StopMotionWithAudio : MonoBehaviour
                         audioSource.volume = 0.8f;
                     }
 
-                    UnityEngine.Debug.Log($"Аудио загружено: {currentAudio.fileName} ({currentAudio.duration:F2} сек)");
+                    Debug.Log($"Аудио загружено: {currentAudio.fileName} ({currentAudio.duration:F2} сек)");
                     UpdateAudioUI();
                 }
                 else
                 {
-                    UnityEngine.Debug.LogError($"Не удалось создать AudioClip из {path}");
+                    Debug.LogError($"Не удалось создать AudioClip из {path}");
                 }
             }
             else
             {
-                UnityEngine.Debug.LogError($"Ошибка загрузки аудио: {www.error}");
+                Debug.LogError($"Ошибка загрузки аудио: {www.error}");
             }
         }
     }
@@ -859,12 +905,12 @@ public class StopMotionWithAudio : MonoBehaviour
             currentAudio.trimStart = 0f;
             currentAudio.trimEnd = 0f;
 
-            UnityEngine.Debug.Log("Аудио удалено");
+            Debug.Log("Аудио удалено");
             UpdateAudioUI();
         }
         else
         {
-            UnityEngine.Debug.LogWarning("Нет аудио для удаления");
+            Debug.LogWarning("Нет аудио для удаления");
         }
     }
 
@@ -903,9 +949,6 @@ public class StopMotionWithAudio : MonoBehaviour
             // Принудительно ограничиваем значение от 0 до 1
             float clampedValue = Mathf.Clamp01(value);
             audioSource.volume = clampedValue;
-
-            // Для отладки (можно убрать)
-            // UnityEngine.Debug.Log($"Громкость: {clampedValue}");
         }
     }
 
@@ -917,7 +960,7 @@ public class StopMotionWithAudio : MonoBehaviour
         if (timelineFrames.Count == 0 ||
             (timelineFrames.Count == 1 && timelineFrames[0].frameSprite == null))
         {
-            UnityEngine.Debug.LogError("Нечего экспортировать!");
+            Debug.LogError("Нечего экспортировать!");
             return;
         }
 
@@ -948,14 +991,14 @@ public class StopMotionWithAudio : MonoBehaviour
 #if UNITY_EDITOR
     private IEnumerator ExportWithFFmpeg(string filePath)
     {
-        UnityEngine.Debug.Log($"Начало экспорта в: {filePath}");
+        Debug.Log($"Начало экспорта в: {filePath}");
 
         string ffmpegPath = Path.Combine(Application.streamingAssetsPath, "FFmpeg", "ffmpeg.exe");
 
         if (!File.Exists(ffmpegPath))
         {
-            UnityEngine.Debug.LogError($"ffmpeg.exe не найден по пути: {ffmpegPath}");
-            UnityEngine.Debug.LogError("Убедись что файл лежит в: Assets/StreamingAssets/FFmpeg/ffmpeg.exe");
+            Debug.LogError($"ffmpeg.exe не найден по пути: {ffmpegPath}");
+            Debug.LogError("Убедись что файл лежит в: Assets/StreamingAssets/FFmpeg/ffmpeg.exe");
             yield break;
         }
 
@@ -983,11 +1026,10 @@ public class StopMotionWithAudio : MonoBehaviour
         if (width % 2 != 0) width += 1;
         if (height % 2 != 0) height += 1;
 
-        // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА
         if (width % 2 != 0) width = width + 1;
         if (height % 2 != 0) height = height + 1;
 
-        UnityEngine.Debug.Log($"Размер видео: {width}x{height}, FPS: {fps}, Кадров: {timelineFrames.Count}");
+        Debug.Log($"Размер видео: {width}x{height}, FPS: {fps}, Кадров: {timelineFrames.Count}");
 
         // Экспортируем кадры в PNG с ПРИНУДИТЕЛЬНЫМ четным размером
         for (int i = 0; i < timelineFrames.Count; i++)
@@ -1040,14 +1082,13 @@ public class StopMotionWithAudio : MonoBehaviour
             audioPath = Path.Combine(tempFolder, "audio.wav");
             byte[] wavData = AudioClipToWav(currentAudio.clip);
             File.WriteAllBytes(audioPath, wavData);
-            UnityEngine.Debug.Log($"Аудио сохранено: {audioPath}");
+            Debug.Log($"Аудио сохранено: {audioPath}");
         }
 
         // =========================================================
         // ФИКС: ПРАВИЛЬНЫЙ ПОРЯДОК АРГУМЕНТОВ FFMPEG
         // =========================================================
 
-        // Сначала все входы (-i), потом фильтры (-vf), потом кодеки (-c)
         string framePattern = $"\"{Path.Combine(tempFolder, "frame_%04d.png")}\"";
         string command = $"-y -framerate {fps} -i {framePattern}";
 
@@ -1058,17 +1099,14 @@ public class StopMotionWithAudio : MonoBehaviour
 
             if (audioDuration > movieDuration)
             {
-                UnityEngine.Debug.LogWarning($"Аудио ({audioDuration:F2} сек) длиннее анимации ({movieDuration:F2} сек). Аудио будет обрезано.");
+                Debug.LogWarning($"Аудио ({audioDuration:F2} сек) длиннее анимации ({movieDuration:F2} сек). Аудио будет обрезано.");
             }
 
-            // Аудио вход ДО фильтра видео
             command += $" -i \"{audioPath}\"";
         }
 
-        // ФИЛЬТР ВИДЕО - применяется К ВИДЕО, а НЕ к аудио
         command += $" -vf \"scale={width}:{height}\"";
 
-        // Кодеки
         if (hasAudio && File.Exists(audioPath))
         {
             command += $" -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest";
@@ -1080,9 +1118,8 @@ public class StopMotionWithAudio : MonoBehaviour
 
         command += $" \"{filePath}\"";
 
-        UnityEngine.Debug.Log($"Команда FFmpeg: {command}");
+        Debug.Log($"Команда FFmpeg: {command}");
 
-        // Запускаем FFmpeg
         try
         {
             Process process = new Process();
@@ -1098,36 +1135,29 @@ public class StopMotionWithAudio : MonoBehaviour
             string output = process.StandardError.ReadToEnd();
             process.WaitForExit();
 
-            UnityEngine.Debug.Log($"FFmpeg завершен с кодом: {process.ExitCode}");
+            Debug.Log($"FFmpeg завершен с кодом: {process.ExitCode}");
 
             if (!string.IsNullOrEmpty(output))
-                UnityEngine.Debug.Log($"FFmpeg вывод:\n{output}");
+                Debug.Log($"FFmpeg вывод:\n{output}");
 
             if (File.Exists(filePath) && new FileInfo(filePath).Length > 0)
             {
-                UnityEngine.Debug.Log($"Видео успешно создано: {filePath}");
+                Debug.Log($"Видео успешно создано: {filePath}");
                 EditorUtility.RevealInFinder(filePath);
             }
             else
             {
-                UnityEngine.Debug.LogError($"FFmpeg не создал MP4 файл! Проверь вывод выше.");
+                Debug.LogError($"FFmpeg не создал MP4 файл! Проверь вывод выше.");
             }
         }
         catch (Exception e)
         {
-            UnityEngine.Debug.LogError($"Ошибка при запуске FFmpeg: {e.Message}");
-        }
-        finally
-        {
-            // Directory.Delete(tempFolder, true);
+            Debug.LogError($"Ошибка при запуске FFmpeg: {e.Message}");
         }
     }
-    // =========================================================
-    // КОНВЕРТАЦИЯ AUDIOCLIP В WAV С УЧЕТОМ ГРОМКОСТИ
-    // =========================================================
+
     private byte[] AudioClipToWav(AudioClip clip)
     {
-        // Получаем текущую громкость из слайдера
         float volume = 1f;
         if (audioVolumeSlider != null)
         {
@@ -1138,13 +1168,11 @@ public class StopMotionWithAudio : MonoBehaviour
             volume = audioSource.volume;
         }
 
-        // Ограничиваем громкость
         volume = Mathf.Clamp01(volume);
 
-        // Если громкость 0 - возвращаем пустой WAV (тишина)
         if (volume <= 0.001f)
         {
-            UnityEngine.Debug.Log("Громкость = 0, экспортируем тишину");
+            Debug.Log("Громкость = 0, экспортируем тишину");
             return CreateSilentWav(clip);
         }
 
@@ -1173,23 +1201,19 @@ public class StopMotionWithAudio : MonoBehaviour
         int dataSize = sampleCount * 2;
         BitConverter.GetBytes(dataSize).CopyTo(wavData, position); position += 4;
 
-        // Записываем аудиоданные С УЧЕТОМ ГРОМКОСТИ
         for (int i = 0; i < samples.Length; i++)
         {
-            // Применяем громкость к сэмплу
             float adjustedSample = samples[i] * volume;
-            // Ограничиваем чтобы не выйти за пределы
             adjustedSample = Mathf.Clamp(adjustedSample, -1f, 1f);
             short sample = (short)(adjustedSample * 32767f);
             BitConverter.GetBytes(sample).CopyTo(wavData, position);
             position += 2;
         }
 
-        UnityEngine.Debug.Log($"Экспорт аудио с громкостью: {volume * 100:F0}%");
+        Debug.Log($"Экспорт аудио с громкостью: {volume * 100:F0}%");
         return wavData;
     }
 
-    // Создает WAV с тишиной (если громкость = 0)
     private byte[] CreateSilentWav(AudioClip clip)
     {
         int sampleCount = clip.samples * clip.channels;
@@ -1214,7 +1238,6 @@ public class StopMotionWithAudio : MonoBehaviour
         int dataSize = sampleCount * 2;
         BitConverter.GetBytes(dataSize).CopyTo(wavData, position); position += 4;
 
-        // Заполняем тишиной (нулями)
         for (int i = 0; i < sampleCount; i++)
         {
             BitConverter.GetBytes((short)0).CopyTo(wavData, position);
@@ -1227,7 +1250,7 @@ public class StopMotionWithAudio : MonoBehaviour
 
     private IEnumerator ExportFramesCoroutine(string folderPath)
     {
-        UnityEngine.Debug.Log($"Export frames to: {folderPath}");
+        Debug.Log($"Export frames to: {folderPath}");
 
         for (int i = 0; i < timelineFrames.Count; i++)
         {
@@ -1278,21 +1301,13 @@ public class StopMotionWithAudio : MonoBehaviour
         }
 
         File.WriteAllText(readmePath, readmeContent);
-        UnityEngine.Debug.Log($"Export completed! Folder: {folderPath}");
+        Debug.Log($"Export completed! Folder: {folderPath}");
     }
 
-    // =========================================================
-    // ============= ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ СОРТИРОВКИ =========
-    // =========================================================
-
-    /// <summary>
-    /// Извлекает первое число из строки. Если чисел нет - возвращает int.MaxValue
-    /// </summary>
     private int ExtractNumber(string text)
     {
         if (string.IsNullOrEmpty(text)) return int.MaxValue;
 
-        // Ищем первую цифру
         int startIndex = -1;
         for (int i = 0; i < text.Length; i++)
         {
@@ -1303,17 +1318,14 @@ public class StopMotionWithAudio : MonoBehaviour
             }
         }
 
-        // Если цифр нет - возвращаем максимальное значение (такие файлы будут в конце)
         if (startIndex == -1) return int.MaxValue;
 
-        // Ищем конец числа
         int endIndex = startIndex;
         while (endIndex < text.Length && char.IsDigit(text[endIndex]))
         {
             endIndex++;
         }
 
-        // Парсим число
         string numberStr = text.Substring(startIndex, endIndex - startIndex);
         if (int.TryParse(numberStr, out int result))
         {
@@ -1323,9 +1335,6 @@ public class StopMotionWithAudio : MonoBehaviour
         return int.MaxValue;
     }
 
-    // =========================================================
-    // ============= DRAG & DROP ==============================
-    // =========================================================
     public void MoveFrame(int fromIndex, int toIndex)
     {
         if (fromIndex == toIndex) return;
@@ -1340,9 +1349,6 @@ public class StopMotionWithAudio : MonoBehaviour
         UpdateUI();
     }
 
-    // =========================================================
-    // ============= ВСПОМОГАТЕЛЬНОЕ ===========================
-    // =========================================================
     private void OnDestroy()
     {
         if (currentAudio.clip != null)
