@@ -935,8 +935,14 @@ public class StopMotionWithAudio : MonoBehaviour
         if (audioPanel != null)
             audioPanel.SetActive(hasAudio);
 
+        // =========================================================
+        // ПРОСТО ОТКЛЮЧАЕМ/ВКЛЮЧАЕМ КНОПКУ
+        // ЦВЕТ БЕРЁТСЯ ИЗ НАСТРОЕК В ИНСПЕКТОРЕ
+        // =========================================================
         if (removeAudioButton != null)
+        {
             removeAudioButton.interactable = hasAudio;
+        }
     }
 
     // =========================================================

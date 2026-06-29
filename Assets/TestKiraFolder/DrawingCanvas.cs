@@ -25,7 +25,7 @@ public class DrawingCanvas : MonoBehaviour, IPointerDownHandler, IDragHandler, I
             drawingImage = GetComponent<Image>();
 
         if (stopMotionController == null)
-            stopMotionController = FindFirstObjectByType<StopMotionWithAudio>();
+            stopMotionController = FindAnyObjectByType<StopMotionWithAudio>();
     }
 
     // Подготовка и проверка текстуры перед рисованием
