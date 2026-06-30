@@ -12,6 +12,7 @@ using Process = System.Diagnostics.Process;
 using UnityEditor;
 #endif
 
+
 [System.Serializable]
 public class StopMotionAudioData
 {
@@ -46,11 +47,11 @@ public class StopMotionWithAudio : MonoBehaviour
     public Button importImageButton;
     public Button importFolderButton;
     public Button exportButton;
-    public Button createEmptyCanvasButton; // Новая кнопка создания чистого листа
+    public Button createEmptyCanvasButton;
 
     [Header("=== ПОВОРОТ ИЗОБРАЖЕНИЙ ===")]
-    public Button rotateCurrentButton;   // Повернуть текущий кадр
-    public Button rotateAllButton;       // Повернуть все кадры
+    public Button rotateCurrentButton;
+    public Button rotateAllButton;
 
     [Header("=== АУДИО ДОРОЖКА ===")]
     public Button importAudioButton;
@@ -63,7 +64,10 @@ public class StopMotionWithAudio : MonoBehaviour
     public TMP_Text totalFramesText;
     public TMP_Text movieLengthText;
 
-    // ===== ВНУТРЕННИЕ ДАННЫЕ (ИЗМЕНЕНО НА PUBLIC ДЛЯ РИСОВАЛКИ) =====
+    [Header("=== ПРОГРЕСС ЭКСПОРТА ===")]
+    public ExportProgressUI exportProgressUI;
+
+    // ===== ВНУТРЕННИЕ ДАННЫЕ =====
     public List<FrameItemData> timelineFrames = new List<FrameItemData>();
     public int currentFrameIndex = 0;
 
@@ -120,7 +124,6 @@ public class StopMotionWithAudio : MonoBehaviour
         if (importFolderButton != null) importFolderButton.onClick.AddListener(ImportFolder);
         if (exportButton != null) exportButton.onClick.AddListener(ExportAnimation);
 
-        // Подключение новой кнопки создания чистого листа
         if (createEmptyCanvasButton != null)
             createEmptyCanvasButton.onClick.AddListener(CreateEmptyCanvas);
 
@@ -159,7 +162,6 @@ public class StopMotionWithAudio : MonoBehaviour
     {
         if (isPlaying) StopAnimation();
 
-        // Создаем чистую белую текстуру 1024x768
         int width = 1024;
         int height = 768;
         Texture2D newTexture = new Texture2D(width, height, TextureFormat.RGBA32, false);
@@ -177,7 +179,6 @@ public class StopMotionWithAudio : MonoBehaviour
             new Vector2(0.5f, 0.5f)
         );
 
-        // Если у нас в начале стоит единственный пустой кадр, перезаписываем его
         if (timelineFrames.Count == 1 && timelineFrames[0].frameSprite == null)
         {
             timelineFrames[0].frameSprite = newSprite;
@@ -399,7 +400,6 @@ public class StopMotionWithAudio : MonoBehaviour
     // ============= ПОВОРОТ ИЗОБРАЖЕНИЙ ======================
     // =========================================================
 
-    // Повернуть текущий кадр на 90 градусов
     public void RotateCurrentFrame()
     {
         if (isPlaying) StopAnimation();
@@ -420,7 +420,6 @@ public class StopMotionWithAudio : MonoBehaviour
         Sprite rotated = RotateSprite(current.frameSprite, 90);
         if (rotated != null)
         {
-            // Удаляем старый спрайт
             Destroy(current.frameSprite.texture);
             Destroy(current.frameSprite);
 
@@ -430,7 +429,6 @@ public class StopMotionWithAudio : MonoBehaviour
         }
     }
 
-    // Повернуть ВСЕ кадры на 90 градусов
     public void RotateAllFrames()
     {
         if (isPlaying) StopAnimation();
@@ -470,7 +468,6 @@ public class StopMotionWithAudio : MonoBehaviour
         }
     }
 
-    // Вспомогательный метод для поворота спрайта
     private Sprite RotateSprite(Sprite original, float angle)
     {
         if (original == null) return null;
@@ -479,20 +476,15 @@ public class StopMotionWithAudio : MonoBehaviour
         int width = originalTex.width;
         int height = originalTex.height;
 
-        // Создаем новую текстуру с повернутыми размерами (меняем местами ширину и высоту)
         Texture2D rotatedTex = new Texture2D(height, width, TextureFormat.RGBA32, true);
 
-        // Получаем пиксели исходной текстуры
         Color[] pixels = originalTex.GetPixels();
-
-        // Поворачиваем на 90 градусов по часовой стрелке
         Color[] rotatedPixels = new Color[pixels.Length];
 
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)
             {
-                // 90 градусов по часовой: newX = height - 1 - y, newY = x
                 int newX = height - 1 - y;
                 int newY = x;
                 rotatedPixels[newY * height + newX] = pixels[y * width + x];
@@ -504,7 +496,6 @@ public class StopMotionWithAudio : MonoBehaviour
         rotatedTex.filterMode = FilterMode.Trilinear;
         rotatedTex.anisoLevel = 8;
 
-        // Создаем новый спрайт
         Sprite newSprite = Sprite.Create(
             rotatedTex,
             new Rect(0, 0, rotatedTex.width, rotatedTex.height),
@@ -620,7 +611,8 @@ public class StopMotionWithAudio : MonoBehaviour
             Debug.Log("Импорт отменён");
         }
 #else
-        Debug.Log("В билде импорт изображений через NativePicker или StreamingAssets");
+        // В БИЛДЕ ИСПОЛЬЗУЕМ NATIVE FILE PICKER
+        PickImagesNative();
 #endif
     }
 
@@ -648,23 +640,17 @@ public class StopMotionWithAudio : MonoBehaviour
 
             if (imageFiles.Count > 0)
             {
-                // =========================================================
-                // УМНАЯ СОРТИРОВКА ПО ЧИСЛАМ В ИМЕНИ ФАЙЛА
-                // =========================================================
                 imageFiles.Sort((a, b) =>
                 {
                     string fileNameA = Path.GetFileNameWithoutExtension(a);
                     string fileNameB = Path.GetFileNameWithoutExtension(b);
 
-                    // Извлекаем числа из имен
                     int numA = ExtractNumber(fileNameA);
                     int numB = ExtractNumber(fileNameB);
 
-                    // Сравниваем числа
                     if (numA != numB)
                         return numA.CompareTo(numB);
 
-                    // Если числа одинаковые - сравниваем как строки
                     return string.Compare(fileNameA, fileNameB, StringComparison.OrdinalIgnoreCase);
                 });
 
@@ -681,11 +667,107 @@ public class StopMotionWithAudio : MonoBehaviour
             Debug.Log("Импорт отменён");
         }
 #else
-        Debug.Log("В билде импорт изображений через NativePicker или StreamingAssets");
+        // В БИЛДЕ ИСПОЛЬЗУЕМ NATIVE FILE PICKER ДЛЯ ПАПКИ
+        PickFolderNative();
 #endif
     }
 
-    // Загрузка одного изображения
+    // =========================================================
+    // ============= NATIVE FILE PICKER (ДЛЯ БИЛДА) ===========
+    // =========================================================
+
+    private void PickImagesNative()
+    {
+        if (NativeFilePicker.IsFilePickerBusy()) return;
+
+        // Разрешаем выбор нескольких файлов
+        NativeFilePicker.PickMultipleFiles((paths) =>
+        {
+            if (paths != null && paths.Length > 0)
+            {
+                Debug.Log($"Выбрано {paths.Length} изображений через NativePicker");
+
+                // Фильтруем только изображения
+                List<string> imagePaths = new List<string>();
+                string[] extensions = { ".png", ".jpg", ".jpeg", ".bmp", ".tga", ".psd", ".gif", ".tiff" };
+
+                foreach (string path in paths)
+                {
+                    string ext = Path.GetExtension(path).ToLower();
+                    if (Array.Exists(extensions, e => e == ext))
+                    {
+                        imagePaths.Add(path);
+                    }
+                }
+
+                if (imagePaths.Count > 0)
+                {
+                    StartCoroutine(LoadMultipleImages(imagePaths.ToArray()));
+                }
+                else
+                {
+                    Debug.LogWarning("Выбраны файлы не являющиеся изображениями!");
+                }
+            }
+        }, new string[] { "image/*" });
+    }
+
+    private void PickFolderNative()
+    {
+        // NativeFilePicker НЕ ИМЕЕТ PickFolder!
+        // Вместо этого выбираем файл, и загружаем все картинки из его папки
+        if (NativeFilePicker.IsFilePickerBusy()) return;
+
+        NativeFilePicker.PickFile((path) =>
+        {
+            if (!string.IsNullOrEmpty(path) && File.Exists(path))
+            {
+                string folderPath = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(folderPath) && Directory.Exists(folderPath))
+                {
+                    Debug.Log($"Выбрана папка: {folderPath}");
+
+                    string[] allFiles = Directory.GetFiles(folderPath, "*.*", SearchOption.TopDirectoryOnly);
+                    List<string> imageFiles = new List<string>();
+                    string[] extensions = { ".png", ".jpg", ".jpeg", ".bmp", ".tga", ".psd", ".gif", ".tiff" };
+
+                    foreach (string file in allFiles)
+                    {
+                        string ext = Path.GetExtension(file).ToLower();
+                        if (Array.Exists(extensions, e => e == ext))
+                        {
+                            imageFiles.Add(file);
+                        }
+                    }
+
+                    if (imageFiles.Count > 0)
+                    {
+                        imageFiles.Sort((a, b) =>
+                        {
+                            string fileNameA = Path.GetFileNameWithoutExtension(a);
+                            string fileNameB = Path.GetFileNameWithoutExtension(b);
+                            int numA = ExtractNumber(fileNameA);
+                            int numB = ExtractNumber(fileNameB);
+                            if (numA != numB) return numA.CompareTo(numB);
+                            return string.Compare(fileNameA, fileNameB, StringComparison.OrdinalIgnoreCase);
+                        });
+
+                        Debug.Log($"Найдено {imageFiles.Count} изображений в папке");
+                        StartCoroutine(LoadMultipleImages(imageFiles.ToArray()));
+                    }
+                    else
+                    {
+                        Debug.LogWarning("В выбранной папке нет изображений!");
+                    }
+                }
+            }
+        }, new string[] { "image/*" });
+    }
+
+    // =========================================================
+    // ============= ЗАГРУЗКА ИЗОБРАЖЕНИЙ =====================
+    // =========================================================
+
     private void LoadImageFromPath(string path)
     {
         if (!File.Exists(path)) return;
@@ -725,7 +807,6 @@ public class StopMotionWithAudio : MonoBehaviour
         }
     }
 
-    // Загрузка множества изображений
     private IEnumerator LoadMultipleImages(string[] paths)
     {
         int loadedCount = 0;
@@ -817,7 +898,22 @@ public class StopMotionWithAudio : MonoBehaviour
         }
 #else
         Debug.Log("В билде импорт аудио через NativePicker");
+        PickAudioNative();
 #endif
+    }
+
+    private void PickAudioNative()
+    {
+        if (NativeFilePicker.IsFilePickerBusy()) return;
+
+        NativeFilePicker.PickFile((path) =>
+        {
+            if (!string.IsNullOrEmpty(path) && File.Exists(path))
+            {
+                Debug.Log($"Выбран аудиофайл: {path}");
+                LoadAudioFromPath(path);
+            }
+        }, new string[] { "audio/*" });
     }
 
     private void LoadAudioFromPath(string path)
@@ -866,7 +962,6 @@ public class StopMotionWithAudio : MonoBehaviour
                         Debug.LogWarning($"Аудио ({clip.length:F2} сек) длиннее анимации ({movieDuration:F2} сек)!");
                     }
 
-                    // Устанавливаем громкость при загрузке
                     if (audioVolumeSlider != null)
                     {
                         audioSource.volume = audioVolumeSlider.value;
@@ -935,24 +1030,16 @@ public class StopMotionWithAudio : MonoBehaviour
         if (audioPanel != null)
             audioPanel.SetActive(hasAudio);
 
-        // =========================================================
-        // ПРОСТО ОТКЛЮЧАЕМ/ВКЛЮЧАЕМ КНОПКУ
-        // ЦВЕТ БЕРЁТСЯ ИЗ НАСТРОЕК В ИНСПЕКТОРЕ
-        // =========================================================
         if (removeAudioButton != null)
         {
             removeAudioButton.interactable = hasAudio;
         }
     }
 
-    // =========================================================
-    // ФИКС: ГРОМКОСТЬ ЗВУКА
-    // =========================================================
     private void OnAudioVolumeChanged(float value)
     {
         if (audioSource != null)
         {
-            // Принудительно ограничиваем значение от 0 до 1
             float clampedValue = Mathf.Clamp01(value);
             audioSource.volume = clampedValue;
         }
@@ -997,23 +1084,38 @@ public class StopMotionWithAudio : MonoBehaviour
 #if UNITY_EDITOR
     private IEnumerator ExportWithFFmpeg(string filePath)
     {
-        Debug.Log($"Начало экспорта в: {filePath}");
+        if (exportProgressUI != null)
+        {
+            exportProgressUI.ShowProgress();
+            exportProgressUI.UpdateStatus("Подготовка к экспорту...");
+        }
+        yield return null;
+
+        UnityEngine.Debug.Log($"Начало экспорта в: {filePath}");
 
         string ffmpegPath = Path.Combine(Application.streamingAssetsPath, "FFmpeg", "ffmpeg.exe");
 
         if (!File.Exists(ffmpegPath))
         {
-            Debug.LogError($"ffmpeg.exe не найден по пути: {ffmpegPath}");
-            Debug.LogError("Убедись что файл лежит в: Assets/StreamingAssets/FFmpeg/ffmpeg.exe");
+            UnityEngine.Debug.LogError($"ffmpeg.exe не найден по пути: {ffmpegPath}");
+
+            if (exportProgressUI != null)
+            {
+                exportProgressUI.UpdateStatus("Ошибка: FFmpeg не найден!");
+                yield return new WaitForSeconds(2f);
+                exportProgressUI.HidePanel();
+            }
             yield break;
         }
+
+        if (exportProgressUI != null)
+            exportProgressUI.UpdateStatus("Экспорт кадров...");
 
         string tempFolder = Path.Combine(Application.temporaryCachePath, "export_frames_" + DateTime.Now.Ticks);
         if (Directory.Exists(tempFolder))
             Directory.Delete(tempFolder, true);
         Directory.CreateDirectory(tempFolder);
 
-        // Получаем размер первого кадра
         int width = 1024;
         int height = 768;
         foreach (var frame in timelineFrames)
@@ -1026,25 +1128,25 @@ public class StopMotionWithAudio : MonoBehaviour
             }
         }
 
-        // =========================================================
-        // ФИКС: ПРИНУДИТЕЛЬНО ДЕЛАЕМ РАЗМЕРЫ ЧЕТНЫМИ
-        // =========================================================
         if (width % 2 != 0) width += 1;
         if (height % 2 != 0) height += 1;
-
         if (width % 2 != 0) width = width + 1;
         if (height % 2 != 0) height = height + 1;
 
-        Debug.Log($"Размер видео: {width}x{height}, FPS: {fps}, Кадров: {timelineFrames.Count}");
+        UnityEngine.Debug.Log($"Размер видео: {width}x{height}, FPS: {fps}, Кадров: {timelineFrames.Count}");
 
-        // Экспортируем кадры в PNG с ПРИНУДИТЕЛЬНЫМ четным размером
-        for (int i = 0; i < timelineFrames.Count; i++)
+        int totalFrames = timelineFrames.Count;
+        for (int i = 0; i < totalFrames; i++)
         {
+            if (i % 5 == 0 && exportProgressUI != null)
+            {
+                exportProgressUI.UpdateStatus($"Экспорт кадров: {i + 1}/{totalFrames}");
+            }
+
             Sprite sprite = timelineFrames[i].frameSprite;
             if (sprite != null)
             {
                 Texture2D tex = sprite.texture;
-
                 int texWidth = tex.width;
                 int texHeight = tex.height;
 
@@ -1052,12 +1154,7 @@ public class StopMotionWithAudio : MonoBehaviour
                 if (texHeight % 2 != 0) texHeight += 1;
 
                 Texture2D readableTex = new Texture2D(texWidth, texHeight, TextureFormat.RGBA32, false);
-
-                RenderTexture tempRT = RenderTexture.GetTemporary(
-                    texWidth, texHeight, 0,
-                    RenderTextureFormat.ARGB32,
-                    RenderTextureReadWrite.sRGB
-                );
+                RenderTexture tempRT = RenderTexture.GetTemporary(texWidth, texHeight, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
 
                 Graphics.Blit(tex, tempRT);
                 RenderTexture previousActive = RenderTexture.active;
@@ -1079,7 +1176,9 @@ public class StopMotionWithAudio : MonoBehaviour
             yield return null;
         }
 
-        // Сохраняем аудио если есть
+        if (exportProgressUI != null)
+            exportProgressUI.UpdateStatus("Сохранение аудио...");
+
         string audioPath = "";
         bool hasAudio = currentAudio.clip != null;
 
@@ -1088,12 +1187,11 @@ public class StopMotionWithAudio : MonoBehaviour
             audioPath = Path.Combine(tempFolder, "audio.wav");
             byte[] wavData = AudioClipToWav(currentAudio.clip);
             File.WriteAllBytes(audioPath, wavData);
-            Debug.Log($"Аудио сохранено: {audioPath}");
+            UnityEngine.Debug.Log($"Аудио сохранено: {audioPath}");
         }
 
-        // =========================================================
-        // ФИКС: ПРАВИЛЬНЫЙ ПОРЯДОК АРГУМЕНТОВ FFMPEG
-        // =========================================================
+        if (exportProgressUI != null)
+            exportProgressUI.UpdateStatus("Кодирование видео...");
 
         string framePattern = $"\"{Path.Combine(tempFolder, "frame_%04d.png")}\"";
         string command = $"-y -framerate {fps} -i {framePattern}";
@@ -1105,7 +1203,7 @@ public class StopMotionWithAudio : MonoBehaviour
 
             if (audioDuration > movieDuration)
             {
-                Debug.LogWarning($"Аудио ({audioDuration:F2} сек) длиннее анимации ({movieDuration:F2} сек). Аудио будет обрезано.");
+                UnityEngine.Debug.LogWarning($"Аудио ({audioDuration:F2} сек) длиннее анимации ({movieDuration:F2} сек). Аудио будет обрезано.");
             }
 
             command += $" -i \"{audioPath}\"";
@@ -1124,11 +1222,14 @@ public class StopMotionWithAudio : MonoBehaviour
 
         command += $" \"{filePath}\"";
 
-        Debug.Log($"Команда FFmpeg: {command}");
+        UnityEngine.Debug.Log($"Команда FFmpeg: {command}");
+
+        Process process = null;
+        bool success = false;
 
         try
         {
-            Process process = new Process();
+            process = new Process();
             process.StartInfo.FileName = ffmpegPath;
             process.StartInfo.Arguments = command;
             process.StartInfo.CreateNoWindow = true;
@@ -1141,24 +1242,31 @@ public class StopMotionWithAudio : MonoBehaviour
             string output = process.StandardError.ReadToEnd();
             process.WaitForExit();
 
-            Debug.Log($"FFmpeg завершен с кодом: {process.ExitCode}");
+            UnityEngine.Debug.Log($"FFmpeg завершен с кодом: {process.ExitCode}");
 
             if (!string.IsNullOrEmpty(output))
-                Debug.Log($"FFmpeg вывод:\n{output}");
+                UnityEngine.Debug.Log($"FFmpeg вывод:\n{output}");
 
             if (File.Exists(filePath) && new FileInfo(filePath).Length > 0)
             {
-                Debug.Log($"Видео успешно создано: {filePath}");
+                UnityEngine.Debug.Log($"Видео успешно создано: {filePath}");
+                success = true;
                 EditorUtility.RevealInFinder(filePath);
             }
             else
             {
-                Debug.LogError($"FFmpeg не создал MP4 файл! Проверь вывод выше.");
+                UnityEngine.Debug.LogError($"FFmpeg не создал MP4 файл! Проверь вывод выше.");
             }
         }
         catch (Exception e)
         {
-            Debug.LogError($"Ошибка при запуске FFmpeg: {e.Message}");
+            UnityEngine.Debug.LogError($"Ошибка при запуске FFmpeg: {e.Message}");
+            success = false;
+        }
+
+        if (exportProgressUI != null)
+        {
+            exportProgressUI.OnExportComplete(success);
         }
     }
 
