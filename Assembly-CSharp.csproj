@@ -55,7 +55,6 @@
     <UnityVersion>6000.4.6f1</UnityVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Analyzer Include="C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\Extensions\Microsoft\Visual Studio Tools for Unity\Analyzers\Microsoft.Unity.Analyzers.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.4.6f1\Editor\Data\Tools\BuildPipeline\Unity.SourceGenerators\Unity.SourceGenerators.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.4.6f1\Editor\Data\Tools\BuildPipeline\Unity.SourceGenerators\Unity.Properties.SourceGenerator.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.4.6f1\Editor\Data\Tools\BuildPipeline\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
@@ -75,6 +74,7 @@
     <Compile Include="Assets\FlipbookManager.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_UiFrameRateCounter.cs" />
     <Compile Include="Assets\ButtonJuice.cs" />
+    <Compile Include="Assets\TestKiraFolder\ColorPaletteButton.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\VertexZoom.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_TextSelector_B.cs" />
     <Compile Include="Assets\AudioTiimeLine\scripts\TimelineControllerStub.cs" />
@@ -715,22 +715,6 @@
       <HintPath>Library\PackageCache\com.unity.collections@65f499a3cc26\Unity.Collections.Tests\System.Runtime.CompilerServices.Unsafe\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="Ookii.Dialogs">
-      <HintPath>Assets\Plugins\StandaloneFileBrowser\Plugins\Ookii.Dialogs.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="System.Windows.Forms">
-      <HintPath>Assets\Plugins\StandaloneFileBrowser\Plugins\System.Windows.Forms.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Unity.Android.Types">
-      <HintPath>C:\Program Files\Unity\Hub\Editor\6000.4.6f1\Editor\Data\PlaybackEngines\AndroidPlayer\Unity.Android.Types.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Unity.Android.Gradle">
-      <HintPath>C:\Program Files\Unity\Hub\Editor\6000.4.6f1\Editor\Data\PlaybackEngines\AndroidPlayer\Unity.Android.Gradle.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="netstandard">
       <HintPath>C:\Program Files\Unity\Hub\Editor\6000.4.6f1\Editor\Data\NetStandard\ref\2.1.0\netstandard.dll</HintPath>
       <Private>False</Private>
@@ -1247,10 +1231,6 @@
       <HintPath>Library\ScriptAssemblies\PsdPlugin.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="NativeFilePicker.Runtime">
-      <HintPath>Library\ScriptAssemblies\NativeFilePicker.Runtime.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="Unity.Rendering.LightTransport.Editor">
       <HintPath>Library\ScriptAssemblies\Unity.Rendering.LightTransport.Editor.dll</HintPath>
       <Private>False</Private>
@@ -1349,10 +1329,6 @@
     </Reference>
     <Reference Include="Unity.2D.Aseprite.Editor">
       <HintPath>Library\ScriptAssemblies\Unity.2D.Aseprite.Editor.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="NativeFilePicker.Editor">
-      <HintPath>Library\ScriptAssemblies\NativeFilePicker.Editor.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.InternalAPIEditorBridge.ShaderGraph.Editor">
@@ -1517,10 +1493,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="Assembly-CSharp-firstpass.csproj">
-      <Project>{ACF97870-BA16-2C82-7AE0-1011A44A7006}</Project>
-      <Name>Assembly-CSharp-firstpass</Name>
-    </ProjectReference>
     <ProjectReference Include="NativeGallery.Editor.csproj">
       <Project>{5B1AE85B-F0F0-78A9-F307-3C2EBC3CFCB6}</Project>
       <Name>NativeGallery.Editor</Name>
@@ -1532,6 +1504,14 @@
     <ProjectReference Include="SimpleFileBrowser.Runtime.csproj">
       <Project>{333EAF2D-B73F-794C-A4D7-D1B3C0ED374F}</Project>
       <Name>SimpleFileBrowser.Runtime</Name>
+    </ProjectReference>
+    <ProjectReference Include="NativeFilePicker.Runtime.csproj">
+      <Project>{DCBFA70C-8AD9-F4DC-6169-B49356B80223}</Project>
+      <Name>NativeFilePicker.Runtime</Name>
+    </ProjectReference>
+    <ProjectReference Include="NativeFilePicker.Editor.csproj">
+      <Project>{DD59C6A5-1510-289A-B2EA-AE63DA9B54CE}</Project>
+      <Name>NativeFilePicker.Editor</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

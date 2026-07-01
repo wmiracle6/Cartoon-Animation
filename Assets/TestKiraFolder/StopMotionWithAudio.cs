@@ -67,6 +67,9 @@ public class StopMotionWithAudio : MonoBehaviour
     [Header("=== ПРОГРЕСС ЭКСПОРТА ===")]
     public ExportProgressUI exportProgressUI;
 
+    [Header("=== ИНТЕГРАЦИЯ РИСОВАНИЯ (НОВОЕ) ===")]
+    public DrawingCanvas drawingCanvas;
+
     // ===== ВНУТРЕННИЕ ДАННЫЕ =====
     public List<FrameItemData> timelineFrames = new List<FrameItemData>();
     public int currentFrameIndex = 0;
@@ -141,6 +144,12 @@ public class StopMotionWithAudio : MonoBehaviour
             audioVolumeSlider.maxValue = 1f;
             audioVolumeSlider.value = 0.8f;
             audioVolumeSlider.onValueChanged.AddListener(OnAudioVolumeChanged);
+        }
+
+        // === АВТОМАТИЧЕСКИЙ ПОИСК РИСОВАЛКИ, ЕСЛИ НЕ НАЗНАЧЕНА ===
+        if (drawingCanvas == null)
+        {
+            drawingCanvas = FindAnyObjectByType<DrawingCanvas>();
         }
 
         // === СОЗДАЕМ НАЧАЛЬНЫЙ КАДР ===
@@ -1484,5 +1493,40 @@ public class StopMotionWithAudio : MonoBehaviour
     {
         if (isPlaying)
             StopAnimation();
+    }
+
+    // =========================================================
+    // === МЕТОДЫ-ОБЕРТКИ ДЛЯ СЛАЙДЕРОВ И КНОПОК РИСОВАНИЯ ===
+    // =========================================================
+    public void SetBrushSize(float size)
+    {
+        if (drawingCanvas != null)
+        {
+            drawingCanvas.SetBrushSize(size);
+        }
+    }
+
+    public void SetDrawMode()
+    {
+        if (drawingCanvas != null)
+        {
+            drawingCanvas.SetDrawMode();
+        }
+    }
+
+    public void SetEraseMode()
+    {
+        if (drawingCanvas != null)
+        {
+            drawingCanvas.SetEraseMode();
+        }
+    }
+
+    public void SetBrushColorHex(string hex)
+    {
+        if (drawingCanvas != null)
+        {
+            drawingCanvas.SetBrushColorHex(hex);
+        }
     }
 }
